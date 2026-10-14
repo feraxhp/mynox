@@ -116,12 +116,13 @@ pub use self::traits::Context;
 pub use self::traits::Formater;
 
 
-const NOTE_DIVIDER: &'static str = "## Notes";
+const NOTE_DIVIDER: &'static str = "# Notes";
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use color_print::cformat;
+    use crate::formater::markdown::Colors;
+
+use super::*;
 
     #[test]
     fn test_error_new() {
@@ -262,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_macro_error_with_cformat() {
-        let formatted_detail = cformat!("<red>Detected invalid token:</> '<<EOF>>'");
+        let formatted_detail = format!("{}Detected invalid token: {}'<<EOF>>'", Colors::Red, Colors::Reset);
         let error = error!(
             "auth::token::expired",
             "Authentication token has expired",

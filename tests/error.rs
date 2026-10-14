@@ -1,4 +1,3 @@
-use color_print::cformat;
 use mynox::{empty_iter, error, Error};
 use std::collections::HashSet;
 use std::io;
@@ -154,7 +153,7 @@ fn test_macro_error_both_details_and_notes() {
 
 #[test]
 fn test_macro_error_with_cformat_expression() {
-    let formatted_detail = cformat!("<red>Detected token:</> '<<EOF>>'");
+    let formatted_detail = format!("\x1b[31mDetected token:\x1b[0m '<<EOF>>'");
     let error = error!(
         "grp::auth::jwt",
         "JWT token validation failed",

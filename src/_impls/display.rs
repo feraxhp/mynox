@@ -8,7 +8,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() { 
             for s in self.render_plain() {
-                write!(f, "{}", s)?
+                writeln!(f, "{}", s)?
             };
         }
         else { write!(f, "{}", self.message())?; }

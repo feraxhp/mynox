@@ -1,19 +1,47 @@
+use std::fmt::Display;
+
+
 #[allow(unused)]
 pub(crate) enum Colors {
+    Black,
     Red,
     Green,
     Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    White,
+    Default,
+    Reset,
     None,
 }
 
 impl Colors {
     pub(crate) fn get_escape_sequence(&self) -> &'static str {
         match self {
-            Colors::Red => "\x1b[31m",
-            Colors::Green => "\x1b[32m",
-            Colors::Yellow => "\x1b[33m",
-            Colors::None => "",
+            // Basic ANSI foreground colors
+            Colors::Black   => "\x1b[30m",
+            Colors::Red     => "\x1b[31m",
+            Colors::Green   => "\x1b[32m",
+            Colors::Yellow  => "\x1b[33m",
+            Colors::Blue    => "\x1b[34m",
+            Colors::Magenta => "\x1b[35m",
+            Colors::Cyan    => "\x1b[36m",
+            Colors::White   => "\x1b[37m",
+            
+            // Default foreground color
+            Colors::Default => "\x1b[39m",
+        
+            // Formatting reset and empty
+            Colors::Reset   => "\x1b[0m",
+            Colors::None    => "",
         }
+    }
+}
+
+impl Display for Colors {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get_escape_sequence())
     }
 }
 
@@ -21,12 +49,12 @@ pub fn parse_markdown_inline(input: &str, base_seq: &str) -> String {
     let mut result = String::with_capacity(input.len());
     let mut chars = input.char_indices().peekable();
 
-    let restore_seq = format!("\x1b[0m{}", base_seq);
+    let restore_seq = format!("{}{}", Colors::Reset, base_seq);
 
     while let Some((_, c)) = chars.next() {
         match c {
             '`' => { // Inline code: magenta
-                result.push_str("\x1b[35m");
+                result.push_str(Colors::Magenta.get_escape_sequence());
                 let mut closed = false;
                 while let Some((_, inner_c)) = chars.next() {
                     if inner_c == '`' {
@@ -43,7 +71,7 @@ pub fn parse_markdown_inline(input: &str, base_seq: &str) -> String {
                 if let Some(&(_, '*')) = chars.peek() {
                     // Bold: blue
                     chars.next(); // Consume second '*'
-                    result.push_str("\x1b[34m");
+                    result.push_str(Colors::Blue.get_escape_sequence());
                     let mut closed = false;
                     while let Some((_, inner_c)) = chars.next() {
                         if inner_c == '*' {

@@ -1,7 +1,5 @@
 use std::iter::once;
 
-use color_print::cformat;
-
 use crate::Error;
 use crate::NOTE_DIVIDER;
 use crate::formater::transform;
@@ -16,7 +14,7 @@ impl Error {
     /// Renders the error details and notes into lines of plain uncolored text.
     ///
     /// Details are prefixed with `* ` (first line) or `  ` (subsequent lines),
-    /// followed by the `## Notes` section divider and the notes.
+    /// followed by the `# Notes` section divider and the notes.
     ///
     /// # Examples
     ///
@@ -73,19 +71,19 @@ impl Error {
                 let way = Color::new(dt.to_owned(), Colors::Yellow);
                 let dt = transform(way);
                 
-                if idx == 0 { cformat!("<y>* {}</>", dt) }
-                else        { cformat!(   "  {}"   , dt) }
+                if idx == 0 { format!("{}* {}{}", Colors::Yellow, dt, Colors::Reset) }
+                else        { format!(  "  {}"  , dt) }
             })
             .chain(once(String::new()))
-            .chain(once(cformat!("<g>{}</>", NOTE_DIVIDER)))
+            .chain(once(format!("{}{}{}", Colors::Green, NOTE_DIVIDER, Colors::Reset)))
             .chain(
                 self.notes.iter().enumerate()
                     .map(|(idx, dt)| {
                         let way = Color::new(dt.to_owned(), Colors::None);
                         let dt = transform(way);
                         
-                        if idx == 0 { cformat!("{}", dt) }
-                        else        { cformat!("{}", dt) }
+                        if idx == 0 { format!("{}", dt) }
+                        else        { format!("{}", dt) }
                     })
             )
     }

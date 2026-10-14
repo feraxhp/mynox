@@ -21,7 +21,7 @@ Traditional error handling often presents developers and users with cryptic one-
   Port 80 requires elevated permissions
   Interface 0.0.0.0 is already bound by another process
 
-## Notes
+# Notes
 ✓ Run with elevated privileges (sudo)
   • sudo ./server --port 80
 ✓ Or choose an unprivileged port (e.g. 8080)
