@@ -13,6 +13,20 @@ use super::types::Plain;
 
 
 impl Error {
+    /// Renders the error details and notes into lines of plain uncolored text.
+    ///
+    /// Details are prefixed with `* ` (first line) or `  ` (subsequent lines),
+    /// followed by the `## Notes` section divider and the notes.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use mynox::error;
+    ///
+    /// let err = error!("auth::login", "Login failed", "Incorrect password" => "Use 'forgot password' to reset");
+    /// let lines: Vec<String> = err.render_plain().collect();
+    /// assert!(!lines.is_empty());
+    /// ```
     pub fn render_plain(&self) -> impl Iterator<Item = String> {
         self.details.iter().enumerate()
             .map(|(idx, dt)| {
@@ -36,6 +50,23 @@ impl Error {
             )
     }
     
+    /// Renders the error details and notes into lines formatted with ANSI escape colors.
+    ///
+    /// Includes inline markdown parsing:
+    /// - `` `code` `` rendered in magenta.
+    /// - `**bold**` rendered in blue.
+    /// - `*italic*` rendered in italics.
+    /// - Special tip and command markers formatted accordingly.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use mynox::error;
+    ///
+    /// let err = error!("net::tcp", "Connection failed", "Timeout connecting to `127.0.0.1:8080`");
+    /// let lines: Vec<String> = err.render_color().collect();
+    /// assert!(!lines.is_empty());
+    /// ```
     pub fn render_color(&self) -> impl Iterator<Item = String> {
         self.details.iter().enumerate()
             .map(|(idx, dt)| {
@@ -59,11 +90,15 @@ impl Error {
             )
     }
 
+    /// Automatically renders using colors if stdout is an interactive terminal and `NO_COLOR` is not set;
+    /// otherwise falls back to plain uncolored text.
     pub fn render_std_out_auto(&self) -> Box<dyn Iterator<Item = String> + '_> {
         if should_use_color_std_out() { Box::new(self.render_color()) } 
         else { Box::new(self.render_plain()) }
     }
     
+    /// Automatically renders using colors if stderr is an interactive terminal and `NO_COLOR` is not set;
+    /// otherwise falls back to plain uncolored text.
     pub fn render_std_err_auto(&self) -> Box<dyn Iterator<Item = String> + '_> {
         if should_use_color_std_err() { Box::new(self.render_color()) } 
         else { Box::new(self.render_plain()) }

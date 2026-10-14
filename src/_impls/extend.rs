@@ -3,7 +3,7 @@ use crate::Error;
 
 
 impl<T> Extend<T> for Result<T, Error> {
-    fn deatil<S: Into<String>>(self, detail: S) -> Result<T, crate::Error> {
+    fn detail<S: Into<String>>(self, detail: S) -> Result<T, crate::Error> {
         self.map_err(|mut e| {
             e.details.push(detail.into());
             e

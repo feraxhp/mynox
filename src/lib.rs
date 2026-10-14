@@ -1,9 +1,103 @@
-//! # Minox
-//! 
-//! from **minos (greek)**, related to mind and analisis, is a error library 
-//! that aims to have clear error messages for what whent wrong and usefull tips for 
-//! how to procede.
-//! 
+//! # Mynox
+//!
+//! **Mynox** (from *minos*, related to mind and analysis) is an error handling and diagnostic
+//! library for Rust designed to produce clear, actionable, and visually distinct error reports.
+//!
+//! Rather than presenting users with opaque error strings or raw backtraces, Mynox structures
+//! diagnostics into three clear levels of information:
+//!
+//! 1. **Message**: A high-level, human-readable summary of what operation failed.
+//! 2. **Details**: Precise diagnostic facts explaining why the failure occurred.
+//! 3. **Notes**: Actionable suggestions, tips, or shell commands guiding the user on how to resolve the issue.
+//!
+//! ## Core Features
+//!
+//! - **Expressive Macro**: Create rich errors in one line using [`error!`].
+//! - **Actionable Notes**: Separate facts from remedies using the `=>` operator in the macro.
+//! - **Causal Chains**: Preserve underlying root-cause errors via `source:` compatible with [`std::error::Error::source`].
+//! - **Context Propagation**: Ergonomically convert any foreign `Result<T, E>` with the [`Context`] trait and `?`.
+//! - **Progressive Enrichment**: Add details and notes at each level of your stack using the [`Extend`] trait.
+//! - **Hierarchical Error Types**: Query errors cleanly with [`Error::is`] and [`Error::is_category`] (e.g. `"io::fs"`).
+//! - **Terminal-Aware Styling**: Colored output with markdown formatting (`` `code` ``, `*italic*`, `**bold**`),
+//!   respecting `NO_COLOR` and terminal detection.
+//! - **Idiomatic `main()` Return**: Wrap errors in [`Report`] to output formatted diagnostics on application exit.
+//!
+//! ## Quick Start
+//!
+//! ```rust
+//! use mynox::{error, Report};
+//!
+//! fn read_config(path: &str) -> Result<String, mynox::Error> {
+//!     if !std::path::Path::new(path).exists() {
+//!         return Err(error!(
+//!             "io::fs::not_found",
+//!             "Failed to read application configuration",
+//!             "The specified path does not exist on disk",
+//!             "Default search directories (/etc, ~/.config) were also exhausted"
+//!             =>
+//!             "Create the configuration file at the requested path",
+//!             "Or run with '--init' to generate a default config file"
+//!         ));
+//!     }
+//!     Ok("config content".into())
+//! }
+//!
+//! fn main() -> Result<(), Report> {
+//!     let config = read_config("missing.toml").map_err(Report::from);
+//!     assert!(config.is_err());
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Propagating Errors with `Context`
+//!
+//! Wrap external errors like [`std::io::Error`] into `mynox::Error` while preserving the root cause:
+//!
+//! ```rust
+//! use mynox::Context;
+//! use std::fs::File;
+//!
+//! fn open_file(path: &str) -> Result<File, mynox::Error> {
+//!     File::open(path).context("io::fs::open", format!("Could not open '{path}'"))
+//! }
+//!
+//! assert!(open_file("/nonexistent/file").is_err());
+//! ```
+//!
+//! ## Progressive Enrichment with `Extend`
+//!
+//! Enrich errors as they bubble up through the call stack:
+//!
+//! ```rust
+//! use mynox::{error, Extend};
+//!
+//! fn query_db() -> Result<(), mynox::Error> {
+//!     Err(error!("db::timeout", "Database query failed", "Connection timed out after 5000ms"))
+//! }
+//!
+//! fn execute_operation() -> Result<(), mynox::Error> {
+//!     query_db()
+//!         .detail("Operation: FetchUserProfile(user_id=42)")
+//!         .note("Check database connectivity and network latency")
+//! }
+//!
+//! let err = execute_operation().unwrap_err();
+//! assert_eq!(err.details().len(), 2);
+//! assert_eq!(err.notes().len(), 1);
+//! ```
+//!
+//! ## Hierarchical Categories
+//!
+//! ```rust
+//! use mynox::error;
+//!
+//! let err = error!("net::http::tls_handshake", "Connection aborted", "Certificate expired");
+//!
+//! assert!(err.is_category("net"));
+//! assert!(err.is_category("net::http"));
+//! assert!(err.is_category("net::http::tls_handshake"));
+//! assert!(!err.is_category("io"));
+//! ```
 
 pub mod formater;
 pub mod structs;
