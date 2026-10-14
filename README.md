@@ -264,3 +264,10 @@ let _stderr_lines = err.render_std_err_auto();
 ## License
 
 This project is licensed under the [MIT License](LICENCE).
+
+---
+
+## AI?
+
+> [!important]
+> Used only for the documentation.
