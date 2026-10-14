@@ -172,3 +172,13 @@ macro_rules! error {
         ])
     }};
 }
+
+/// Returns a string with the location of the file where is called
+/// 
+/// > **example:** `main.rs:10:12`
+#[macro_export]
+macro_rules! location {
+    () => {
+        format!("`{}:{}:{}`", file!(), line!(), column!())
+    };
+}
