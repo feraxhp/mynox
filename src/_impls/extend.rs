@@ -3,12 +3,12 @@ use crate::Error;
 
 
 impl Error {
-    fn extend_detail<S: Into<String>>(mut self, detail: S) -> Error {
+    pub fn extend_detail<S: Into<String>>(mut self, detail: S) -> Error {
         self.details.push(detail.into());
         self
     }
 
-    fn extend_details<B>(mut self, details: B) -> Error
+    pub fn extend_details<B>(mut self, details: B) -> Error
     where
         B: IntoIterator,
         B::Item: Into<String>,
@@ -17,7 +17,7 @@ impl Error {
         self
     }
 
-    fn extend_details_with<F, B>(mut self, f: F) -> Error
+    pub fn extend_details_with<F, B>(mut self, f: F) -> Error
     where
         F: FnOnce() -> B,
         B: IntoIterator,
@@ -28,12 +28,12 @@ impl Error {
         self
     }
 
-    fn extend_note<S: Into<String>>(mut self, note: S) -> Error {
+    pub fn extend_note<S: Into<String>>(mut self, note: S) -> Error {
         self.notes.push(note.into());
         self
     }
 
-    fn extend_notes<B>(mut self, notes: B) -> Error
+    pub fn extend_notes<B>(mut self, notes: B) -> Error
     where
         B: IntoIterator,
         B::Item: Into<String>,
@@ -42,7 +42,7 @@ impl Error {
         self
     }
 
-    fn extend_notes_with<F, B>(mut self, f: F) -> Error
+    pub fn extend_notes_with<F, B>(mut self, f: F) -> Error
     where
         F: FnOnce() -> B,
         B: IntoIterator,
