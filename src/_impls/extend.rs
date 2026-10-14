@@ -2,12 +2,62 @@ use crate::Extend;
 use crate::Error;
 
 
+impl Error {
+    fn extend_detail<S: Into<String>>(mut self, detail: S) -> Error {
+        self.details.push(detail.into());
+        self
+    }
+
+    fn extend_details<B>(mut self, details: B) -> Error
+    where
+        B: IntoIterator,
+        B::Item: Into<String>,
+     {
+        self.details.extend(details.into_iter().map(|s| s.into()));
+        self
+    }
+
+    fn extend_details_with<F, B>(mut self, f: F) -> Error
+    where
+        F: FnOnce() -> B,
+        B: IntoIterator,
+        B::Item: Into<String>,
+     {
+        let details = f();
+        self.details.extend(details.into_iter().map(|s| s.into()));
+        self
+    }
+
+    fn extend_note<S: Into<String>>(mut self, note: S) -> Error {
+        self.notes.push(note.into());
+        self
+    }
+
+    fn extend_notes<B>(mut self, notes: B) -> Error
+    where
+        B: IntoIterator,
+        B::Item: Into<String>,
+     {
+        self.notes.extend(notes.into_iter().map(|s| s.into()));
+        self
+    }
+
+    fn extend_notes_with<F, B>(mut self, f: F) -> Error
+    where
+        F: FnOnce() -> B,
+        B: IntoIterator,
+        B::Item: Into<String>,
+     {
+        let notes = f();
+        self.notes.extend(notes.into_iter().map(|s| s.into()));
+        self
+    }
+}
+
+
 impl<T> Extend<T> for Result<T, Error> {
     fn detail<S: Into<String>>(self, detail: S) -> Result<T, crate::Error> {
-        self.map_err(|mut e| {
-            e.details.push(detail.into());
-            e
-        })
+        self.map_err(|e| { e.extend_detail(detail) })
     }
 
     fn details<B>(self, details: B) -> Result<T, crate::Error>
@@ -15,10 +65,7 @@ impl<T> Extend<T> for Result<T, Error> {
         B: IntoIterator,
         B::Item: Into<String>,
      {
-        self.map_err(|mut e| {
-            e.details.extend(details.into_iter().map(|s| s.into()));
-            e
-        })
+        self.map_err(|e| { e.extend_details(details) })
     }
 
     fn with_details<F, B>(self, f: F) -> Result<T, crate::Error>
@@ -27,18 +74,11 @@ impl<T> Extend<T> for Result<T, Error> {
         B: IntoIterator,
         B::Item: Into<String>,
      {
-        self.map_err(|mut e| {
-            let details = f();
-            e.details.extend(details.into_iter().map(|s| s.into()));
-            e
-        })
+        self.map_err(|e| { e.extend_details_with(f) })
     }
 
     fn note<S: Into<String>>(self, note: S) -> Result<T, crate::Error> {
-        self.map_err(|mut e| {
-            e.notes.push(note.into());
-            e
-        })
+        self.map_err(|e| { e.extend_note(note) })
     }
 
     fn notes<B>(self, notes: B) -> Result<T, crate::Error>
@@ -46,10 +86,7 @@ impl<T> Extend<T> for Result<T, Error> {
         B: IntoIterator,
         B::Item: Into<String>,
      {
-        self.map_err(|mut e| {
-            e.notes.extend(notes.into_iter().map(|s| s.into()));
-            e
-        })
+        self.map_err(|e| { e.extend_notes(notes) })
     }
 
     fn with_notes<F, B>(self, f: F) -> Result<T, crate::Error>
@@ -58,10 +95,6 @@ impl<T> Extend<T> for Result<T, Error> {
         B: IntoIterator,
         B::Item: Into<String>,
      {
-        self.map_err(|mut e| {
-            let notes = f();
-            e.notes.extend(notes.into_iter().map(|s| s.into()));
-            e
-        })
+        self.map_err(|e| { e.extend_notes_with(f) })
     }
 }
