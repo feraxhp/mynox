@@ -1,5 +1,5 @@
 
-use crate::formater::markdown::Colors;
+use crate::formater::parser::Colors;
 use crate::formater::types::Color;
 use crate::formater::types::Plain;
 use crate::traits::Printer;

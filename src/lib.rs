@@ -120,12 +120,12 @@ const NOTE_DIVIDER: &'static str = "# Notes";
 
 #[cfg(test)]
 mod tests {
-    use crate::formater::markdown::Colors;
-
-use super::*;
-
+    use crate::formater::parser::Colors;
+    
+    use super::*;
+    
     #[test]
-    fn test_error_new() {
+    fn error_new() {
         let error = Error::new(
             "grp::parsing::url", 
             "Error parsing a url", 
@@ -141,7 +141,7 @@ use super::*;
     }
 
     #[test]
-    fn test_macro_error_three_arguments() {
+    fn macro_error_three_arguments() {
         let error = error!(
             "io::fs::file_not_found",
             "Unable to locate configuration file",
@@ -157,7 +157,7 @@ use super::*;
     }
 
     #[test]
-    fn test_macro_error_multiple_details() {
+    fn macro_error_multiple_details() {
         let error = error!(
             "syntax::json::unexpected_token",
             "Failed to deserialize request payload",
@@ -179,7 +179,7 @@ use super::*;
     }
 
     #[test]
-    fn test_macro_error_notes_comma_arrow() {
+    fn macro_error_notes_comma_arrow() {
         let error = error!(
             "net::http::invalid_port",
             "Failed to bind server to specified address",
@@ -204,7 +204,7 @@ use super::*;
     }
 
     #[test]
-    fn test_macro_error_notes_no_comma_arrow() {
+    fn macro_error_notes_no_comma_arrow() {
         let error = error!(
             "db::pool::timeout",
             "Database connection pool exhausted",
@@ -229,7 +229,7 @@ use super::*;
     }
 
     #[test]
-    fn test_macro_error_details_and_notes() {
+    fn macro_error_details_and_notes() {
         let error = error!(
             "grp::parsing::url",
             "Error parsing a url",
@@ -262,7 +262,7 @@ use super::*;
     }
 
     #[test]
-    fn test_macro_error_with_cformat() {
+    fn macro_error_with_cformat() {
         let formatted_detail = format!("{}Detected invalid token: {}'<<EOF>>'", Colors::Red, Colors::Reset);
         let error = error!(
             "auth::token::expired",

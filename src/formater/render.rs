@@ -3,7 +3,7 @@ use std::iter::once;
 use crate::Error;
 use crate::NOTE_DIVIDER;
 use crate::formater::transform;
-use crate::formater::markdown::Colors;
+use crate::formater::parser::Colors;
 use crate::termianal::should_use_color_std_err;
 use crate::termianal::should_use_color_std_out;
 use super::types::Color;

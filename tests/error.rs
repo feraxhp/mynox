@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::io;
 
 #[test]
-fn test_error_new_with_empty_iter() {
+fn error_new_with_empty_iter() {
     let error = Error::new(
         "grp::parsing::url",
         "Error parsing a url",
@@ -22,7 +22,7 @@ fn test_error_new_with_empty_iter() {
 }
 
 #[test]
-fn test_macro_error_three_arguments() {
+fn macro_error_three_arguments() {
     let error = error!(
         "grp::fs::read",
         "Failed to read application configuration",
@@ -40,7 +40,7 @@ fn test_macro_error_three_arguments() {
 }
 
 #[test]
-fn test_macro_error_with_multiple_details() {
+fn macro_error_with_multiple_details() {
     let error = error!(
         "grp::parsing::json",
         "Syntax error while parsing JSON payload",
@@ -66,7 +66,7 @@ fn test_macro_error_with_multiple_details() {
 }
 
 #[test]
-fn test_macro_error_notes_with_comma_arrow() {
+fn macro_error_notes_with_comma_arrow() {
     let error = error!(
         "grp::net::bind",
         "Could not bind listener to address",
@@ -92,7 +92,7 @@ fn test_macro_error_notes_with_comma_arrow() {
 }
 
 #[test]
-fn test_macro_error_notes_without_comma_arrow() {
+fn macro_error_notes_without_comma_arrow() {
     let error = error!(
         "grp::db::pool",
         "Database connection pool exhausted",
@@ -118,7 +118,7 @@ fn test_macro_error_notes_without_comma_arrow() {
 }
 
 #[test]
-fn test_macro_error_both_details_and_notes() {
+fn macro_error_both_details_and_notes() {
     let error = error!(
         "grp::parsing::url",
         "Error parsing a url",
@@ -152,7 +152,7 @@ fn test_macro_error_both_details_and_notes() {
 }
 
 #[test]
-fn test_macro_error_with_cformat_expression() {
+fn macro_error_with_cformat_expression() {
     let formatted_detail = format!("\x1b[31mDetected token:\x1b[0m '<<EOF>>'");
     let error = error!(
         "grp::auth::jwt",
@@ -183,7 +183,7 @@ fn test_macro_error_with_cformat_expression() {
 }
 
 #[test]
-fn test_error_display_and_equality() {
+fn error_display_and_equality() {
     let err1 = error!(
         "grp::parsing::url",
         "Error parsing a url",
@@ -209,7 +209,7 @@ fn test_error_display_and_equality() {
 }
 
 #[test]
-fn test_error_from_source() {
+fn error_from_source() {
     let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "permission denied");
     let error = Error::from(
         io_err,
@@ -243,7 +243,7 @@ fn test_error_from_source() {
 }
 
 #[test]
-fn test_error_hash_and_hashset() {
+fn error_hash_and_hashset() {
     let err1 = error!(
         "grp::auth::unauthorized",
         "Token expired",
@@ -273,7 +273,7 @@ fn test_error_hash_and_hashset() {
 }
 
 #[test]
-fn test_error_ordering() {
+fn error_ordering() {
     let err_b = error!("b::operation::failed", "Error B", "Detail B");
     let err_a = error!("a::operation::failed", "Error A", "Detail A");
     let err_c = error!("c::operation::failed", "Error C", "Detail C");
@@ -292,7 +292,7 @@ fn test_error_ordering() {
 }
 
 #[test]
-fn test_error_as_ref() {
+fn error_as_ref() {
     let error = error!(
         "grp::io::not_found",
         "File missing",
@@ -305,7 +305,7 @@ fn test_error_as_ref() {
 }
 
 #[test]
-fn test_macro_error_with_source_three_arguments() {
+fn macro_error_with_source_three_arguments() {
     let io_err = io::Error::new(io::ErrorKind::NotFound, "entity not found");
     let error = error!(
         source: io_err,
@@ -329,7 +329,7 @@ fn test_macro_error_with_source_three_arguments() {
 }
 
 #[test]
-fn test_macro_error_with_source_and_multiple_details() {
+fn macro_error_with_source_and_multiple_details() {
     let io_err = io::Error::new(io::ErrorKind::ConnectionReset, "connection reset by peer");
     let error = error!(
         source: io_err,
@@ -358,7 +358,7 @@ fn test_macro_error_with_source_and_multiple_details() {
 }
 
 #[test]
-fn test_macro_error_with_source_and_notes_comma_arrow() {
+fn macro_error_with_source_and_notes_comma_arrow() {
     let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "access denied");
     let error = error!(
         source: io_err,
@@ -390,7 +390,7 @@ fn test_macro_error_with_source_and_notes_comma_arrow() {
 }
 
 #[test]
-fn test_macro_error_with_source_and_notes_without_comma_arrow() {
+fn macro_error_with_source_and_notes_without_comma_arrow() {
     let io_err = io::Error::new(io::ErrorKind::TimedOut, "connection timed out");
     let error = error!(
         source: io_err,
@@ -422,7 +422,7 @@ fn test_macro_error_with_source_and_notes_without_comma_arrow() {
 }
 
 #[test]
-fn test_macro_error_with_source_details_and_notes() {
+fn macro_error_with_source_details_and_notes() {
     let io_err = io::Error::new(io::ErrorKind::AddrInUse, "address already in use");
     let error = error!(
         source: io_err,

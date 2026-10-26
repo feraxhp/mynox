@@ -1,4 +1,4 @@
-pub mod markdown;
+pub mod parser;
 pub mod printer;
 pub mod render;
 pub mod types;

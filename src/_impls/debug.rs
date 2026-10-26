@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{Report, formater::markdown::Colors};
+use crate::{Report, formater::parser::Colors};
 
 impl Debug for Report {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
