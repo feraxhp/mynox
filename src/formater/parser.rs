@@ -125,6 +125,24 @@ const DELIMITERS: &[(&str, TagKind)] = &[
     ("~", TagKind::Dim),
 ];
 
+const ESCAPES: &[(&str, &str)] = &[
+    ("--", "-"),
+    ("++", "+"),
+    ("==", "="),
+    ("^^", "^"),
+    ("__", "_"),
+    ("``", "`"),
+];
+
+fn match_escape(rem: &str) -> Option<(&'static str, usize)> {
+    for &(esc, rep) in ESCAPES {
+        if rem.starts_with(esc) {
+            return Some((rep, esc.len()));
+        }
+    }
+    None
+}
+
 fn candidate_delimiters(rem: &str) -> Vec<(&'static str, TagKind)> {
     if rem.starts_with("***") {
         let after_triple = &rem[3..];
@@ -203,6 +221,17 @@ fn parse_tokens<'a>(
 
     while idx < end_idx {
         let rem = &input[idx..end_idx];
+
+        // 0. Check for escape sequences (e.g. `--` -> `-`, `++` -> `+`, `==` -> `=`)
+        if let Some((rep, esc_len)) = match_escape(rem) {
+            if text_start < idx {
+                nodes.push(Node::Text(&input[text_start..idx]));
+            }
+            nodes.push(Node::Text(rep));
+            idx += esc_len;
+            text_start = idx;
+            continue;
+        }
 
         // 1. Check if current position matches the closing delimiter of stop_kind
         if let Some(stop) = stop_kind {
@@ -397,11 +426,12 @@ pub fn decorator_parser(input: &str, base_seq: &str, colored: bool) -> String {
     result
 }
 
+#[macro_export]
+macro_rules! show { ($string:literal $(, $base:expr )?) => { println!("{}", decorator_parser($string, None $(.or(Some($base)) )? .unwrap_or(Colors::None).colored(false), true)) }; }
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    macro_rules! show { ($string:literal $(, $base:expr )?) => { println!("{}", decorator_parser($string, None $(.or(Some($base)) )? .unwrap_or(Colors::None).colored(false), true)) }; }
 
     #[test]
     fn visual() {
@@ -424,6 +454,8 @@ mod tests {
         show!("half  : ~**blue** *cyan* -red-~^ +green+ =yellow= `magenta`^");
         show!("-+=`***blue** cyan* magenta` yellow= green+ red-");
         show!("-+=`***cyan* blue** magenta` yellow= green+ red-");
+        show!("**you = test**");
+        show!("*3 -- 4 = -1-*");
     }
     
     #[test]
@@ -475,6 +507,37 @@ mod tests {
         assert_eq!(
             res,
             format!("{}blue {}red{} blue{}", blue_ansi, red_ansi, restore_blue, final_restore)
+        );
+    }
+
+    #[test]
+    fn escape_sequences_plain() {
+        assert_eq!(decorator_parser("--", "", false), "-");
+        assert_eq!(decorator_parser("++", "", false), "+");
+        assert_eq!(decorator_parser("==", "", false), "=");
+        assert_eq!(decorator_parser("^^", "", false), "^");
+        assert_eq!(decorator_parser("__", "", false), "_");
+        assert_eq!(decorator_parser("``", "", false), "`");
+        assert_eq!(decorator_parser("*3 -- 4 = -1-*", "", false), "*3 - 4 = -1-*");
+        assert_eq!(decorator_parser("-foo--bar-", "", false), "-foo-bar-");
+        assert_eq!(decorator_parser("----", "", false), "--");
+    }
+
+    #[test]
+    fn escape_sequences_colored() {
+        let res = decorator_parser("*3 -- 4 = -1-*", "", true);
+        let cyan_ansi = "\x1b[0m\x1b[36m";
+        let red_ansi = "\x1b[0m\x1b[31m";
+        let restore = "\x1b[0m";
+        assert_eq!(
+            res,
+            format!("{}3 - 4 = {}1{}", cyan_ansi, red_ansi, restore)
+        );
+
+        let res_red = decorator_parser("-foo--bar-", "", true);
+        assert_eq!(
+            res_red,
+            format!("{}foo-bar{}", red_ansi, restore)
         );
     }
 
