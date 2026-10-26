@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::formater::markdown::Colors;
-use crate::formater::markdown::parse_markdown_inline;
+use crate::formater::markdown::decorator_parser;
 
 
 pub(super) struct Color(pub(crate) String);
@@ -18,12 +18,12 @@ impl Display for Plain {
     }
 }
 
-impl Color { pub(crate) fn new(string: String, base: Colors) -> Self { Self(process(string, base)) } }
-impl Plain { pub(crate) fn new(string: String) -> Self { Self(string) } }
+impl Color { pub(crate) fn new(string: String, base: Colors) -> Self { Self(process(string, base, true)) } }
+impl Plain { pub(crate) fn new(string: String) -> Self { Self(process(string, Colors::None, false)) } }
 
-pub(crate) fn process(string: String, base_color: Colors) -> String {
-    let base_seq = base_color.get_escape_sequence();
-    let parsed = parse_markdown_inline(&string, base_seq);
+pub(crate) fn process(string: String, base_color: Colors, colored: bool) -> String {
+    let base_seq = base_color.get_escape_sequence(colored);
+    let parsed = decorator_parser(&string, base_seq, colored);
     
     format!("{}{}\x1b[0m", base_seq, parsed)
 }

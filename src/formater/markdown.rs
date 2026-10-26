@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::{Debug, Display}};
 
 
 #[allow(unused)]
@@ -11,114 +11,149 @@ pub(crate) enum Colors {
     Magenta,
     Cyan,
     White,
+    Dim,
+    DarkGray,
+    BrightRed,
+    BrightGreen,
+    BrightYellow,
+    BrightBlue,
+    BrightMagenta,
+    BrightCyan,
+    BrightWhite,
+    Itallic,
     Default,
     Reset,
     None,
 }
 
 impl Colors {
-    pub(crate) fn get_escape_sequence(&self) -> &'static str {
+    fn colored(&self) -> &'static str {
         match self {
             // Basic ANSI foreground colors
-            Colors::Black   => "\x1b[30m",
-            Colors::Red     => "\x1b[31m",
-            Colors::Green   => "\x1b[32m",
-            Colors::Yellow  => "\x1b[33m",
-            Colors::Blue    => "\x1b[34m",
-            Colors::Magenta => "\x1b[35m",
-            Colors::Cyan    => "\x1b[36m",
-            Colors::White   => "\x1b[37m",
-            
-            // Default foreground color
-            Colors::Default => "\x1b[39m",
+            Colors::Black         => "\x1b[30m",
+            Colors::Red           => "\x1b[31m",
+            Colors::Green         => "\x1b[32m",
+            Colors::Yellow        => "\x1b[33m",
+            Colors::Blue          => "\x1b[34m",
+            Colors::Magenta       => "\x1b[35m",
+            Colors::Cyan          => "\x1b[36m",
+            Colors::White         => "\x1b[37m",
+        
+            // Aditional secuences
+            Colors::Dim           => "\x1b[2m",
+            Colors::Itallic       => "\x1b[3m",
+            Colors::DarkGray      => "\x1b[90m",
+        
+            // Bright / High-intensity foreground colors
+            Colors::BrightRed     => "\x1b[91m",
+            Colors::BrightGreen   => "\x1b[92m",
+            Colors::BrightYellow  => "\x1b[93m",
+            Colors::BrightBlue    => "\x1b[94m",
+            Colors::BrightMagenta => "\x1b[95m",
+            Colors::BrightCyan    => "\x1b[96m",
+            Colors::BrightWhite   => "\x1b[97m",
         
             // Formatting reset and empty
-            Colors::Reset   => "\x1b[0m",
-            Colors::None    => "",
+            Colors::Default       => "\x1b[39m",
+            Colors::Reset         => "\x1b[0m",
+            Colors::None          => "",
+        }
+    }
+    
+    pub(crate) fn get_escape_sequence(&self, colored: bool) -> &'static str {
+        match colored {
+            true => self.colored(),
+            false => todo!(),
         }
     }
 }
 
 impl Display for Colors {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.get_escape_sequence())
+        if f.alternate() { write!(f, "{}", self.get_escape_sequence(false)) }
+        else { write!(f, "{}", self.get_escape_sequence(true)) }
     }
 }
 
-pub fn parse_markdown_inline(input: &str, base_seq: &str) -> String {
+macro_rules! decorate {
+    ($close:literal $color:expr, $result:expr, $chars:expr, $restore_seq:expr, $colored:expr) => {{
+        $result.push_str($color.get_escape_sequence($colored));
+        let mut closed = false;
+        while let Some((_, inner_c)) = $chars.next() {
+            if inner_c == $close {
+                closed = true;
+                break;
+            }
+            $result.push(inner_c);
+        }
+        if closed { $result.push_str(&$restore_seq); }
+    }};
+    (peek $char:literal $color:expr, $result:expr, $chars:expr, $restore_seq:expr, $colored:expr) => {{
+        $chars.next(); // Consume second '*'
+        $result.push_str($color.get_escape_sequence($colored));
+        let mut closed = false;
+        while let Some((_, inner_c)) = $chars.next() {
+            if inner_c == $char {
+                if let Some(&(_, $char)) = $chars.peek() {
+                    $chars.next(); // Consume second $char
+                    closed = true;
+                    break;
+                }
+            }
+            $result.push(inner_c);
+        }
+        if closed { $result.push_str(&$restore_seq); }
+    }};
+    ($char:literal > $simple_color:expr, $extended_color:expr, $result:expr, $chars:expr, $restore_seq:expr, $colored:expr) => {{
+        if let Some(&(_, $char)) = $chars.peek() { 
+            decorate!(peek $char $extended_color, $result, $chars, $restore_seq, $colored)
+        } 
+        else { decorate!($char $simple_color, $result, $chars, $restore_seq, $colored) }
+    }};
+}
+
+pub fn decorator_parser(input: &str, base_seq: &str, colored: bool) -> String {
     let mut result = String::with_capacity(input.len());
     let mut chars = input.char_indices().peekable();
-
-    let restore_seq = format!("{}{}", Colors::Reset, base_seq);
-
+    
+    let mut restore_seq = format!("{}{}", Colors::Reset, base_seq);
+    
+    // let mut opened = HashSet::new();
     while let Some((_, c)) = chars.next() {
+        if colored {  }
         match c {
-            '`' => { // Inline code: magenta
-                result.push_str(Colors::Magenta.get_escape_sequence());
-                let mut closed = false;
-                while let Some((_, inner_c)) = chars.next() {
-                    if inner_c == '`' {
-                        closed = true;
-                        break;
-                    }
-                    result.push(inner_c);
-                }
-                if closed {
-                    result.push_str(&restore_seq);
-                }
-            }
-            '*' => { // Check if it's bold (**text**) or italic (*text*)
-                if let Some(&(_, '*')) = chars.peek() {
-                    // Bold: blue
-                    chars.next(); // Consume second '*'
-                    result.push_str(Colors::Blue.get_escape_sequence());
-                    let mut closed = false;
-                    while let Some((_, inner_c)) = chars.next() {
-                        if inner_c == '*' {
-                            if let Some(&(_, '*')) = chars.peek() {
-                                chars.next(); // Consume second '*'
-                                closed = true;
-                                break;
-                            }
-                        }
-                        result.push(inner_c);
-                    }
-                    if closed {
-                        result.push_str(&restore_seq);
-                    }
-                } else { // Italic: italic
-                    result.push_str("\x1b[3m");
-                    let mut closed = false;
-                    while let Some((_, inner_c)) = chars.next() {
-                        if inner_c == '*' {
-                            closed = true;
-                            break;
-                        }
-                        result.push(inner_c);
-                    }
-                    if closed {
-                        result.push_str(&restore_seq);
-                    }
-                }
-            }
-            _ => {
-                result.push(c);
-            }
+            '_' => decorate!('_' > Colors::Itallic, Colors::Blue, result, chars, restore_seq, colored),
+            '*' => decorate!('*' > Colors::Itallic, Colors::Blue, result, chars, restore_seq, colored),
+            '~' => decorate!('~' > Colors::Dim, Colors::DarkGray, result, chars, restore_seq, colored),
+            '`' => decorate!('`' Colors::Magenta, result, chars, restore_seq, colored),
+            '^' => {
+                
+            },
+            _ => result.push(c),
         }
     }
-
+    
     result
 }
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    
+    #[test]
+    fn terminal_look() {
+        let input = "Here is ^**some code**^ **inline**";
+        let base_seq = "";
+        eprintln!("{}", decorator_parser(input, base_seq, true))
+    }
+    
     #[test]
     fn test_inline_code_no_base_color() {
         let input = "Here is `some code` inline";
         let base_seq = "";
         let expected = "Here is \x1b[35msome code\x1b[0m inline";
-        assert_eq!(parse_markdown_inline(input, base_seq), expected);
+        assert_eq!(decorator_parser(input, base_seq, true), expected);
     }
 
     #[test]
@@ -126,7 +161,7 @@ mod tests {
         let input = "This is **bold text**";
         let base_seq = "";
         let expected = "This is \x1b[34mbold text\x1b[0m";
-        assert_eq!(parse_markdown_inline(input, base_seq), expected);
+        assert_eq!(decorator_parser(input, base_seq, true), expected);
     }
 
     #[test]
@@ -134,7 +169,7 @@ mod tests {
         let input = "This is *italic text*";
         let base_seq = "";
         let expected = "This is \x1b[3mitalic text\x1b[0m";
-        assert_eq!(parse_markdown_inline(input, base_seq), expected);
+        assert_eq!(decorator_parser(input, base_seq, true), expected);
     }
 
     #[test]
@@ -142,17 +177,17 @@ mod tests {
         let input = "A *mix* of **bold** and `code`";
         let base_seq = "";
         let expected = "A \x1b[3mmix\x1b[0m of \x1b[34mbold\x1b[0m and \x1b[35mcode\x1b[0m";
-        assert_eq!(parse_markdown_inline(input, base_seq), expected);
+        assert_eq!(decorator_parser(input, base_seq, true), expected);
     }
 
     #[test]
     fn test_with_red_base_color() {
         let input = "Hello **world**!";
-        let base_seq = Colors::Red.get_escape_sequence(); // "\x1b[31m"
+        let base_seq = Colors::Red.get_escape_sequence(true); // "\x1b[31m"
         
         // It should restore the red color (\x1b[31m) after the bold text finishes
         let expected = "Hello \x1b[34mworld\x1b[0m\x1b[31m!";
-        assert_eq!(parse_markdown_inline(input, base_seq), expected);
+        assert_eq!(decorator_parser(input, base_seq, true), expected);
     }
 
     #[test]
@@ -162,6 +197,6 @@ mod tests {
         let input = "This `code never ends";
         let base_seq = "";
         let expected = "This \x1b[35mcode never ends"; // No restore sequence because it was never closed
-        assert_eq!(parse_markdown_inline(input, base_seq), expected);
+        assert_eq!(decorator_parser(input, base_seq, true), expected);
     }
 }
