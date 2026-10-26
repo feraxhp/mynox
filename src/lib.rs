@@ -98,6 +98,87 @@
 //! assert!(err.is_category("net::http::tls_handshake"));
 //! assert!(!err.is_category("io"));
 //! ```
+//!
+//! ## Inline Formatting and Color Parsing
+//!
+//! Mynox includes a built-in decorator parser ([`formater::parser::decorator_parser`]) that processes
+//! lightweight markdown-like tags within error messages, details, and notes. It formats text according to
+//! two distinct output modes: **colored mode** and **plain mode**.
+//!
+//! ### Supported Syntax and Delimiters
+//!
+//! | Delimiter | Color / Style | ANSI Escape Sequence | Plain Mode Behavior |
+//! |:---|:---|:---|:---|
+//! | `**text**` | Bold (Blue) | `\x1b[34m` | Kept as `**text**` |
+//! | `` `text` `` | Code (Magenta) | `\x1b[35m` | Kept as `` `text` `` |
+//! | `*text*` | Cyan | `\x1b[36m` | Kept as `*text*` |
+//! | `-text-` | Red | `\x1b[31m` | Kept as `-text-` |
+//! | `+text+` | Green | `\x1b[32m` | Kept as `+text+` |
+//! | `=text=` | Yellow | `\x1b[33m` | Kept as `=text=` |
+//! | `~~text~~` | Dark Gray | `\x1b[90m` | Kept as `~~text~~` |
+//! | `_text_` | Italic modifier | `\x1b[3m` | Kept as `_text_` |
+//! | `^text^` | Bright modifier | Elevates inner color to bright ANSI (e.g. `\x1b[94m`) | Stripped (outputs `text`) |
+//! | `~text~` | Dim modifier | `\x1b[2m` | Stripped (outputs `text`) |
+//!
+//! #### Escape Sequences
+//!
+//! To display literal delimiter characters instead of formatting, double the delimiter:
+//!
+//! - `--` becomes `-` (e.g. `*3 -- 4 = -1-*` renders as `*3 - 4 = -1-*`)
+//! - `++` becomes `+`
+//! - `==` becomes `=`
+//! - `^^` becomes `^`
+//! - `__` becomes `_`
+//! - ```` ```` becomes `` ` ``
+//!
+//! #### Robustness & Hierarchical Nesting
+//!
+//! - Tags strictly follow hierarchical nesting (e.g. `^**bright blue**^` or `-+=`***blue** cyan* magenta` yellow= green+ red-`).
+//! - Unclosed tags (such as `= algo` or `**unterminated`) or mismatched crossed delimiters are treated as literal text, preventing accidental formatting corruption.
+//!
+//! ### How Color is Parsed (`colored = true`)
+//!
+//! In colored mode (used by [`Error::render_color`] and when printing to interactive TTY terminals):
+//! - Tag delimiters are replaced with their corresponding ANSI escape sequences.
+//! - Modifiers combine with colors: wrapping a color tag in `^` (e.g. `^**blue**^`) renders it in high-intensity bright color (`\x1b[94m`), while `~` (e.g. `~**blue**~`) activates dim styling (`\x1b[2m`).
+//! - When exiting a tagged span, the parser emits ANSI reset and restores the active base sequence (such as yellow for error details or green for section headers).
+//!
+//! ### How Plain Text is Parsed (`colored = false`)
+//!
+//! In plain mode (used by [`Error::render_plain`], when `NO_COLOR` is set, or when stdout/stderr is redirected to a file or pipe):
+//! - Visual and markdown delimiters (`**`, `` ` ``, `*`, `_`, `-`, `+`, `=`, `~~`) are **preserved** in the output so the text maintains semantic markdown formatting in log files, text files, and markdown renderers.
+//! - Terminal-only modifiers (`^` for bright and `~` for dim) have no visual plaintext equivalent and are **stripped** (`^text^` renders as `text`, `~text~` renders as `text`).
+//! - Escape sequences are resolved to their single literal character (e.g., `--` becomes `-`).
+//!
+//! ### Running the Colors Example
+//!
+//! Mynox provides a `colors` example illustrating inline formatting in action:
+//!
+//! #### When cloning the repository:
+//!
+//! ```bash
+//! cargo run --example colors
+//!
+//! # Or pass a custom formatted sequence:
+//! cargo run --example colors -- "-red- +green+ =yellow= `code` *cyan* **blue**"
+//! ```
+//!
+//! #### When installing `mynox` without cloning:
+//!
+//! If you added or installed `mynox` via Cargo and want to run the example without cloning the source repository, use `cargo install` with the `--example` flag:
+//!
+//! ```bash
+//! cargo install mynox --example colors
+//! ```
+//!
+//! This compiles and installs the `colors` executable into `~/.cargo/bin/`. You can then run it directly:
+//!
+//! ```bash
+//! colors
+//!
+//! # Or pass custom formatted text:
+//! colors "-red- +green+ =yellow= `code` *cyan* **blue**"
+//! ```
 
 pub mod formater;
 pub mod structs;
