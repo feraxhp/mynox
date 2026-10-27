@@ -1,5 +1,4 @@
 use mynox::{Error, Formater, OptionError, Show, empty_iter, error};
-// use mynox::;
 use std::collections::HashSet;
 use std::io;
 
@@ -427,7 +426,7 @@ fn macro_error_with_source_and_notes_without_comma_arrow() {
         source: io_err,
         "grp::db::pool",
         "Database connection pool exhausted",
-        "Timed out waiting 3000ms for an available connection from pool 'main'"
+        "Timed out waiting 3000ms for an available connection from pool 'main'",
         =>
         "Try increasing the 'max_connections' limit in database.toml",
         "Ensure active transactions are released after query execution",
@@ -488,4 +487,80 @@ fn macro_error_with_source_details_and_notes() {
     let src = src.unwrap();
     assert_eq!(src.to_string(), "address already in use");
     assert!(src.downcast_ref::<io::Error>().is_some());
+}
+
+#[test]
+fn collection_empty_iterator() {
+    let empty: Vec<Error> = vec![];
+    let res = empty.into_iter().collect::<OptionError>().into_option();
+    assert!(res.is_none());
+}
+
+#[test]
+fn collection_single_error_unwrapped() {
+    let err = error!("auth::expired", "Session expired", "Token timed out");
+    let res = vec![err.clone()]
+        .into_iter()
+        .collect::<OptionError>()
+        .into_option()
+        .unwrap();
+
+    assert!(!res.is_collection());
+    assert_eq!(res.etype(), "auth::expired");
+    assert_eq!(res.message(), "Session expired");
+    assert!(res.contains_exact("auth::expired"));
+    assert!(res.contains_category("auth"));
+    assert_eq!(res.get_error("auth::expired").unwrap().message(), "Session expired");
+}
+
+#[test]
+fn collection_multiple_errors_and_deduplication() {
+    let err1 = error!("io::fs::read", "Failed to read", "Disk error");
+    let err2 = error!("io::fs::read", "Different message", "Same etype should be deduplicated");
+    let err3 = error!("net::http::bind", "Bind failed", "Port 80 in use");
+
+    let collection = vec![err1.clone(), err2, err3.clone()]
+        .into_iter()
+        .collect::<OptionError>()
+        .into_option()
+        .unwrap();
+
+    assert!(collection.is_collection());
+    assert!(collection.contains_category("io"));
+    assert!(collection.contains_category("io::fs"));
+    assert!(collection.contains_category("net"));
+    assert!(!collection.contains_category("db"));
+
+    assert!(collection.contains_exact("io::fs::read"));
+    assert!(collection.contains_exact("net::http::bind"));
+    assert!(!collection.contains_exact("io::fs"));
+
+    let etypes: Vec<&'static str> = collection.get_etypes().collect();
+    assert_eq!(etypes.len(), 2);
+    assert!(etypes.contains(&"io::fs::read"));
+    assert!(etypes.contains(&"net::http::bind"));
+
+    let found_read = collection.get_error("io::fs::read");
+    assert!(found_read.is_some());
+    assert_eq!(found_read.unwrap().etype(), "io::fs::read");
+
+    let found_missing = collection.get_error("database::timeout");
+    assert!(found_missing.is_none());
+}
+
+#[test]
+fn collection_nested_accumulation() {
+    let err1 = error!("a::err", "Error A", "Detail A");
+    let err2 = error!("b::err", "Error B", "Detail B");
+    let sub_collection = vec![err1, err2].into_iter().collect::<OptionError>().into_option().unwrap();
+
+    let err3 = error!("c::err", "Error C", "Detail C");
+    let combined = vec![sub_collection, err3].into_iter().collect::<OptionError>().into_option().unwrap();
+
+    assert!(combined.is_collection());
+    let etypes: Vec<&'static str> = combined.get_etypes().collect();
+    assert_eq!(etypes.len(), 3);
+    assert!(combined.contains_exact("a::err"));
+    assert!(combined.contains_exact("b::err"));
+    assert!(combined.contains_exact("c::err"));
 }
