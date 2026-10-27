@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::iter::once;
 use std::sync::Arc;
 use std::fmt::Display;
@@ -86,6 +87,8 @@ pub struct Error {
     pub(crate) details: Vec<String>,
     /// **Notes** of what to do to solve it.
     pub(crate) notes: Vec<String>,
+    /// **Errors** a list of errors of a collection, allways empty unless his etype is `mynox::collection`
+    pub(crate) errors: HashSet<Error>,
 }
 
 impl Error {
@@ -135,6 +138,7 @@ impl Error {
             message: message.to_string(),
             details: once(details.to_string()).chain(explanation.into_iter().map(Into::into)).collect(),
             notes: notes.into_iter().map(Into::into).collect(),
+            errors: HashSet::new(),
         }
     }
     
@@ -183,6 +187,7 @@ impl Error {
             message: message.to_string(),
             details: once(details.to_string()).chain(explanation.into_iter().map(Into::into)).collect(),
             notes: notes.into_iter().map(Into::into).collect(),
+            errors: HashSet::new(),
         }
     }
     

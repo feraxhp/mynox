@@ -1,6 +1,37 @@
-use mynox::{empty_iter, error, Error};
+use mynox::{Error, Formater, OptionError, Show, empty_iter, error};
+// use mynox::;
 use std::collections::HashSet;
 use std::io;
+
+
+#[test]
+fn visual_color_outputs() {
+    let error = [
+        error!(
+            "grp::parsing::json",
+            "Syntax error while parsing JSON payload",
+            "Unexpected token ',' at line 8, column 12",
+            "Expected object key or closing curly brace '}'",
+            => "Trailing commas are forbidden by JSON specification".as_tip(),
+        ),
+        error!(
+            "grp::parsing::json::second",
+            "Syntax error while parsing JSON payload",
+            "Unexpected token ',' at line 8, column 12",
+            "Expected object key or closing curly brace '}'",
+            => "Trailing commas are forbidden by +JSON+ specification".as_tip(),
+        ),
+    ].into_iter().collect::<OptionError>().into_option().unwrap();
+    
+    
+    println!("{}", error.message());
+    error.render_color()
+        .eprintln();
+    
+    println!("{}", error.message());
+    error.render_plain()
+        .eprintln();
+}
 
 #[test]
 fn error_new_with_empty_iter() {

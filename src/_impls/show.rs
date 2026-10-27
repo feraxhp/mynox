@@ -9,12 +9,12 @@ where
 {
     fn print(&mut self) {
         for value in self.by_ref() { 
-            print!("{value}") 
+            println!("{value}") 
         }
     }
     fn eprint(&mut self) {
         for value in self.by_ref() { 
-            eprint!("{value}") 
+            eprintln!("{value}") 
         }
     }
 }

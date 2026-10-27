@@ -75,7 +75,7 @@ macro_rules! empty_iter { () => {{ [""; 0] }}; }
 ///    ```
 #[macro_export]
 macro_rules! error {
-    ($etype:expr, $message:expr, $detail:expr) => {{
+    ($etype:expr, $message:expr, $detail:expr $(,)?) => {{
         $crate::Error::new($etype, $message, $detail, [""; 0], [""; 0])
     }};
     (

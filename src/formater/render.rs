@@ -25,39 +25,48 @@ impl Error {
     /// let lines: Vec<String> = err.render_plain().collect();
     /// assert!(!lines.is_empty());
     /// ```
-    pub fn render_plain(&self) -> impl Iterator<Item = String> {
-        self.details.iter().enumerate()
-            .map(|(idx, dt)| {
-                let way = Plain::new(dt.to_owned());
-                let dt = transform(way);
-                
-                if idx == 0 { format!("* {}", dt) }
-                else        { format!("  {}", dt) }
-            })
-            .chain(once(String::new()))
-            .chain(once(NOTE_DIVIDER.to_string()))
-            .chain(
-                self.notes.iter().enumerate()
-                    .map(|(idx, dt)| {
-                        let way = Plain::new(dt.to_owned());
-                        let dt = transform(way);
-                        
-                        if idx == 0 { format!("* {}", dt) }
-                        else        { format!("  {}", dt) }
-                    })
-            )
+    pub fn render_plain(&self) -> Box<dyn Iterator<Item = String> + '_> {
+        let details_iter = self.details.iter().enumerate().map(|(idx, dt)| {
+            let way = Plain::new(dt.to_owned());
+            let dt = transform(way);
+            
+            if idx == 0 { format!("* {}", dt) }
+            else        { format!("  {}", dt) }
+        });
+        
+        let suberrors = self.is_collection().then(|| {
+            self.errors.iter().enumerate().flat_map(|(idx, e)| {
+                    let header = once(format!("\n  {}. {}", idx+1, e.message()));
+                    let body = e.render_plain().map(|line| format!("     {line}"));
+            
+                    header.chain(body)
+                })
+        })
+        .into_iter()
+        .flatten();
+        
+        let notes_iter = (!self.notes.is_empty()).then(|| {
+            once(String::new())
+                .chain(once(NOTE_DIVIDER.to_string()))
+                .chain(self.notes.iter().enumerate().map(|(idx, dt)| {
+                    let way = Plain::new(dt.to_owned());
+                    let dt = transform(way);
+    
+                    if idx == 0 { format!("  {}", dt) }
+                    else        { format!("  {}", dt) }
+                }))
+        })
+        .into_iter()
+        .flatten(); // Si fue None, produce 0 elementos; si fue Some, produce las notas
+        
+        Box::new(details_iter.chain(suberrors).chain(notes_iter))
     }
     
+    
     /// Renders the error details and notes into lines formatted with ANSI escape colors.
-    ///
-    /// Includes inline markdown parsing:
-    /// - `` `code` `` rendered in magenta.
-    /// - `**bold**` rendered in blue.
-    /// - `*italic*` rendered in italics.
-    /// - Special tip and command markers formatted accordingly.
-    ///
+    /// 
     /// # Examples
-    ///
+    /// 
     /// ```rust
     /// use mynox::error;
     ///
@@ -65,29 +74,46 @@ impl Error {
     /// let lines: Vec<String> = err.render_color().collect();
     /// assert!(!lines.is_empty());
     /// ```
-    pub fn render_color(&self) -> impl Iterator<Item = String> {
-        self.details.iter().enumerate()
+    pub fn render_color(&self) -> Box<dyn Iterator<Item = String> + '_> {
+        let details_iter = self.details.iter().enumerate()
             .map(|(idx, dt)| {
-                let way = Color::new(dt.to_owned(), Colors::Yellow);
+                let color = if idx == 0 { Colors::Yellow } else { Colors::Yellow }; 
+                let way = Color::new(dt.to_owned(), color);
                 let dt = transform(way);
                 
                 if idx == 0 { format!("{}* {}{}", Colors::Yellow, dt, Colors::Reset) }
-                else        { format!(  "  {}"  , dt) }
-            })
-            .chain(once(String::new()))
-            .chain(once(format!("{}{}{}", Colors::Green, NOTE_DIVIDER, Colors::Reset)))
-            .chain(
-                self.notes.iter().enumerate()
-                    .map(|(idx, dt)| {
+                else        { format!("  {}", dt) }
+            });
+        
+        let suberrors = self.is_collection().then(|| {
+            self.errors.iter().enumerate().flat_map(|(idx, e)| {
+                    let header = once(format!("\n  {}{}. {}{}", Colors::Red, idx+1, e.message(), Colors::Reset));
+                    let body = e.render_color().map(|line| format!("     {line}"));
+            
+                    header.chain(body)
+                })
+        })
+        .into_iter()
+        .flatten();
+        
+        let notes_iter = (!self.notes.is_empty()).then(|| {
+            once(String::new())
+                .chain(once(format!("{}{}{}", Colors::Green, NOTE_DIVIDER, Colors::Reset)))
+                .chain(
+                    self.notes.iter().enumerate().map(|(_idx, dt)| {
                         let way = Color::new(dt.to_owned(), Colors::None);
                         let dt = transform(way);
-                        
-                        if idx == 0 { format!("{}", dt) }
-                        else        { format!("{}", dt) }
+                        format!("  {}", dt)
                     })
-            )
+                )
+        })
+        .into_iter()
+        .flatten();
+        
+        Box::new(details_iter.chain(suberrors).chain(notes_iter))
     }
-
+    
+    
     /// Automatically renders using colors if stdout is an interactive terminal and `NO_COLOR` is not set;
     /// otherwise falls back to plain uncolored text.
     pub fn render_std_out_auto(&self) -> Box<dyn Iterator<Item = String> + '_> {

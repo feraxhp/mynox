@@ -451,7 +451,7 @@ mod tests {
         show!("colors: **blue** *cyan* -red- +green+ =yellow= `magenta`");
         show!("brigth: ^**blue** *cyan* -red- +green+ =yellow= `magenta`^");
         show!("dimmed: ~**blue** *cyan* -red- +green+ =yellow= `magenta`~");
-        show!("half  : ~**blue** *cyan* -red-~^ +green+ =yellow= `magenta`^");
+        show!("  half: ~**blue** *cyan* -red-~^ +green+ =yellow= `magenta`^");
         show!("-+=`***blue** cyan* magenta` yellow= green+ red-");
         show!("-+=`***cyan* blue** magenta` yellow= green+ red-");
         show!("**you = test**");

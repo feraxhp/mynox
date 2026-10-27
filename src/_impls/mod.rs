@@ -1,3 +1,4 @@
+pub mod collection;
 pub mod context;
 pub mod display;
 pub mod borrow;

@@ -195,7 +195,11 @@ pub use self::traits::Show;
 pub use self::traits::Extend;
 pub use self::traits::Context;
 pub use self::traits::Formater;
+pub use self::_impls::collection::OptionError;
 
+
+#[allow(non_upper_case_globals)]
+pub const collection: &str = "mynox::collection";
 
 const NOTE_DIVIDER: &'static str = "# Notes";
 
