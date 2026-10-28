@@ -79,10 +79,11 @@ enum TagKind {
     Bright,    // ^  -> Bright modifier
     Italic,    // _  -> Italic modifier
     Dim,       // ~  -> Dim modifier
+    Raw,       // <raw>...</raw> -> Raw modifier (no formatting parsed inside)
 }
 
 impl TagKind {
-    fn delimiter(&self) -> &'static str {
+    fn open_delimiter(&self) -> &'static str {
         match self {
             TagKind::Bold => "**",
             TagKind::Code => "`",
@@ -94,6 +95,14 @@ impl TagKind {
             TagKind::Bright => "^",
             TagKind::Italic => "_",
             TagKind::Dim => "~",
+            TagKind::Raw => "<raw>",
+        }
+    }
+
+    fn close_delimiter(&self) -> &'static str {
+        match self {
+            TagKind::Raw => "</raw>",
+            other => other.open_delimiter(),
         }
     }
 
@@ -106,13 +115,14 @@ impl TagKind {
             TagKind::Green => Some(Colors::Green),
             TagKind::Yellow => Some(Colors::Yellow),
             TagKind::DarkGray => Some(Colors::DarkGray),
-            TagKind::Bright | TagKind::Italic | TagKind::Dim => None,
+            TagKind::Bright | TagKind::Italic | TagKind::Dim | TagKind::Raw => None,
         }
     }
 }
 
-// Delimiters ordered by priority/length to avoid prefix conflicts (e.g. `**` before `*`, `~~` before `~`)
+// Delimiters ordered by priority/length to avoid prefix conflicts (e.g. `<raw>` before others, `**` before `*`, `~~` before `~`)
 const DELIMITERS: &[(&str, TagKind)] = &[
+    ("<raw>", TagKind::Raw),
     ("**", TagKind::Bold),
     ("~~", TagKind::DarkGray),
     ("`", TagKind::Code),
@@ -219,6 +229,23 @@ fn parse_tokens<'a>(
     let mut nodes = Vec::new();
     let mut text_start = idx;
 
+    // Inside a Raw tag (<raw>...</raw>), do not parse any formatting or escapes.
+    if stop_kind == Some(TagKind::Raw) {
+        let close = TagKind::Raw.close_delimiter();
+        while idx < end_idx {
+            let rem = &input[idx..end_idx];
+            if rem.starts_with(close) {
+                if text_start < idx {
+                    nodes.push(Node::Text(&input[text_start..idx]));
+                }
+                return (nodes, idx + close.len(), true);
+            }
+            let ch = rem.chars().next().unwrap();
+            idx += ch.len_utf8();
+        }
+        return (Vec::new(), idx, false);
+    }
+
     while idx < end_idx {
         let rem = &input[idx..end_idx];
 
@@ -235,7 +262,7 @@ fn parse_tokens<'a>(
 
         // 1. Check if current position matches the closing delimiter of stop_kind
         if let Some(stop) = stop_kind {
-            let delim = stop.delimiter();
+            let delim = stop.close_delimiter();
             if rem.starts_with(delim) {
                 // If stop is `*` (Cyan) and rem starts with `**`, do NOT close `*`
                 // because `**` is Bold.
@@ -378,6 +405,7 @@ fn render_node<'a>(
                         TagKind::Bright => next_style.bright = true,
                         TagKind::Italic => next_style.italic = true,
                         TagKind::Dim => next_style.dim = true,
+                        TagKind::Raw => {}
                         _ => {}
                     }
                 }
@@ -386,14 +414,14 @@ fn render_node<'a>(
                     render_node(child, next_style, colored, result, last_applied_style);
                 }
             } else {
-                // In plain mode: keep formatting delimiters (Markdown), strip purely terminal modifiers (^ and ~)
+                // In plain mode: keep formatting delimiters (Markdown), strip purely terminal modifiers (^ and ~) and raw tag (<raw>)
                 let print_delim = match kind {
-                    TagKind::Bright | TagKind::Dim => false,
+                    TagKind::Bright | TagKind::Dim | TagKind::Raw => false,
                     _ => true,
                 };
 
                 if print_delim {
-                    result.push_str(kind.delimiter());
+                    result.push_str(kind.open_delimiter());
                 }
 
                 for child in children {
@@ -401,7 +429,7 @@ fn render_node<'a>(
                 }
 
                 if print_delim {
-                    result.push_str(kind.delimiter());
+                    result.push_str(kind.close_delimiter());
                 }
             }
         }
@@ -456,6 +484,8 @@ mod tests {
         show!("-+=`***cyan* blue** magenta` yellow= green+ red-");
         show!("**you = test**");
         show!("*3 -- 4 = -1-*");
+        show!("-red content <raw>raw **not blue** -not red-</raw> red again-");
+        show!("**This text is blue <raw> -this should be blue- # + this also should be blue + </raw>**");
     }
     
     #[test]
@@ -470,6 +500,10 @@ mod tests {
         assert_eq!(decorator_parser("=yellow=", "", false), "=yellow=");
         assert_eq!(decorator_parser("~~darkgray~~", "", false), "~~darkgray~~");
         assert_eq!(decorator_parser("~dim~", "", false), "dim");
+        assert_eq!(decorator_parser("<raw>raw</raw>", "", false), "raw");
+        assert_eq!(decorator_parser("<raw>**raw not bold**</raw>", "", false), "**raw not bold**");
+        assert_eq!(decorator_parser("-<raw>raw</raw>-", "", false), "-raw-");
+        assert_eq!(decorator_parser("-<raw>**raw**</raw>-", "", false), "-**raw**-");
     }
 
     #[test]
@@ -479,6 +513,8 @@ mod tests {
         assert_eq!(decorator_parser("Invalid character '^' at position 15", "", false), "Invalid character '^' at position 15");
         assert_eq!(decorator_parser("**text", "", true), "**text");
         assert_eq!(decorator_parser("= algo", "", true), "= algo");
+        assert_eq!(decorator_parser("<raw>raw unclosed", "", false), "<raw>raw unclosed");
+        assert_eq!(decorator_parser("<raw>raw unclosed", "", true), "<raw>raw unclosed");
     }
 
     #[test]
@@ -495,6 +531,18 @@ mod tests {
 
         let bright_blue = decorator_parser("**^text^**", "", true);
         assert_eq!(bright_blue, format!("{}{}{}", "\x1b[0m\x1b[94m", "text", "\x1b[0m"));
+
+        let raw = decorator_parser("<raw>text</raw>", "", true);
+        assert_eq!(raw, "text");
+
+        let raw_in_blue = decorator_parser("**<raw>text</raw>**", "", true);
+        assert_eq!(raw_in_blue, format!("{}{}{}", "\x1b[0m\x1b[34m", "text", "\x1b[0m"));
+
+        let raw_in_red_with_inner = decorator_parser("-red <raw>raw **not bold**</raw> red-", "", true);
+        assert_eq!(
+            raw_in_red_with_inner,
+            format!("{}red raw **not bold** red{}", "\x1b[0m\x1b[31m", "\x1b[0m")
+        );
     }
 
     #[test]
@@ -521,6 +569,9 @@ mod tests {
         assert_eq!(decorator_parser("*3 -- 4 = -1-*", "", false), "*3 - 4 = -1-*");
         assert_eq!(decorator_parser("-foo--bar-", "", false), "-foo-bar-");
         assert_eq!(decorator_parser("----", "", false), "--");
+        // Hash is normal text now, no escaping needed
+        assert_eq!(decorator_parser("#123", "", false), "#123");
+        assert_eq!(decorator_parser("##", "", false), "##");
     }
 
     #[test]
@@ -538,6 +589,37 @@ mod tests {
         assert_eq!(
             res_red,
             format!("{}foo-bar{}", red_ansi, restore)
+        );
+    }
+
+    #[test]
+    fn raw_delimiter_preserves_inner_content_and_symbols() {
+        // Plain mode: tags eliminated, content intact
+        assert_eq!(
+            decorator_parser("<raw>**bold** -red- +green+ =yellow= `code` *cyan* _italic_ ^bright^ ~dim~ ~~dark~~ #123</raw>", "", false),
+            "**bold** -red- +green+ =yellow= `code` *cyan* _italic_ ^bright^ ~dim~ ~~dark~~ #123"
+        );
+
+        // Colored mode: tags eliminated, content intact (no formatting applied)
+        assert_eq!(
+            decorator_parser("<raw>**bold** -red- +green+ =yellow= `code` *cyan* _italic_ ^bright^ ~dim~ ~~dark~~ #123</raw>", "", true),
+            "**bold** -red- +green+ =yellow= `code` *cyan* _italic_ ^bright^ ~dim~ ~~dark~~ #123"
+        );
+
+        // User case: arbitrary symbols like # and + inside raw block within bold
+        let input = "**This text is blue <raw> -this should be blue- # + this also should be blue + </raw>**";
+        let colored = decorator_parser(input, "", true);
+        let blue_ansi = "\x1b[0m\x1b[34m";
+        let restore = "\x1b[0m";
+        assert_eq!(
+            colored,
+            format!("{}This text is blue  -this should be blue- # + this also should be blue + {}", blue_ansi, restore)
+        );
+
+        let plain = decorator_parser(input, "", false);
+        assert_eq!(
+            plain,
+            "**This text is blue  -this should be blue- # + this also should be blue + **"
         );
     }
 

@@ -21,4 +21,5 @@ fn main() {
     println!("  *3 -- 4 = -1-*:\n  -> '{}'", decorator_parser("*3 -- 4 = -1-*", "", true));
     println!("  -red- +green+ =yellow= `code` *cyan* **blue**:\n  -> '{}'", decorator_parser("-red- +green+ =yellow= `code` *cyan* **blue**", "", true));
     println!("  ^**bright blue**^ ~dimmed~ ~~darkgray~~:\n  -> '{}'", decorator_parser("^**bright blue**^ ~dimmed~ ~~darkgray~~", "", true));
+    println!("  **blue <raw> -blue- # + blue + </raw>**:\n  -> '{}'", decorator_parser("**This text is blue <raw> -this should be blue- # + this also should be blue + </raw>**", "", true));
 }

@@ -229,6 +229,7 @@ Mynox includes a built-in decorator parser that translates lightweight markdown-
 | `_text_` | Italic modifier | `\x1b[3m` | Kept as `_text_` |
 | `^text^` | Bright modifier | Elevates inner color to bright ANSI (e.g. `\x1b[94m`) | Stripped (outputs `text`) |
 | `~text~` | Dim modifier | `\x1b[2m` | Stripped (outputs `text`) |
+| `<raw>text</raw>` | Raw modifier (no formatting parsed inside) | Inherits parent style | Stripped (outputs `text`) |
 
 #### Escape Sequences
 
@@ -251,13 +252,14 @@ To display literal delimiter characters instead of formatting, double the delimi
 In colored mode (used by `Error::render_color()` and when printing to interactive TTY terminals):
 - Tag delimiters are replaced with their corresponding ANSI escape sequences.
 - Modifiers combine with colors: wrapping a color tag in `^` (e.g. `^**blue**^`) renders it in high-intensity bright color (`\x1b[94m`), while `~` (e.g. `~**blue**~`) activates dim styling (`\x1b[2m`).
+- Raw blocks (`<raw>text</raw>`) eliminate the `<raw>` and `</raw>` tags, preserve whatever style was active higher in the stack, and keep the inner text unparsed in raw mode.
 - When exiting a tagged span, the parser emits ANSI reset and restores the active base sequence (such as yellow for error details or green for section headers).
 
 #### How Plain Text is Parsed (`colored = false`)
 
 In plain mode (used by `Error::render_plain()`, when `NO_COLOR` is set, or when stdout/stderr is redirected to a file or pipe):
 - Visual and markdown delimiters (`**`, `` ` ``, `*`, `_`, `-`, `+`, `=`, `~~`) are **preserved** in the output so the text maintains semantic markdown formatting in log files, text files, and markdown renderers.
-- Terminal-only modifiers (`^` for bright and `~` for dim) have no visual plaintext equivalent and are **stripped** (`^text^` renders as `text`, `~text~` renders as `text`).
+- Terminal-only modifiers (`^` for bright and `~` for dim) and raw delimiters (`<raw>...</raw>`) have their delimiter tags **stripped** (`^text^` renders as `text`, `~text~` renders as `text`, `<raw>text</raw>` renders as `text`).
 - Escape sequences are resolved to their single literal character (e.g., `--` becomes `-`).
 
 #### Running the Colors Example
