@@ -273,6 +273,10 @@ cargo run --example colors
 
 # Or pass a custom formatted sequence:
 cargo run --example colors -- "-red- +green+ =yellow= `code` *cyan* **blue**"
+
+# Or inspect plain text output with --plain or -p:
+cargo run --example colors -- --plain
+cargo run --example colors -- -p "-red- <raw>raw content</raw> **bold**"
 ```
 
 ##### 2. When installing `mynox` without cloning:
@@ -290,6 +294,7 @@ colors
 
 # Or pass custom formatted text:
 colors "-red- +green+ =yellow= `code` *cyan* **blue**"
+colors -p "-red- <raw>raw content</raw> **bold**"
 ```
 
 *(Note: Ensure `~/.cargo/bin` is in your `$PATH`, or run `~/.cargo/bin/colors` directly).*

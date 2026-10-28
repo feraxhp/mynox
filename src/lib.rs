@@ -163,6 +163,10 @@
 //!
 //! # Or pass a custom formatted sequence:
 //! cargo run --example colors -- "-red- +green+ =yellow= `code` *cyan* **blue**"
+//!
+//! # Or inspect plain text output with --plain or -p:
+//! cargo run --example colors -- --plain
+//! cargo run --example colors -- -p "-red- <raw>raw content</raw> **bold**"
 //! ```
 //!
 //! #### When installing `mynox` without cloning:
@@ -180,6 +184,7 @@
 //!
 //! # Or pass custom formatted text:
 //! colors "-red- +green+ =yellow= `code` *cyan* **blue**"
+//! colors -p "-red- <raw>raw content</raw> **bold**"
 //! ```
 
 pub mod formater;
