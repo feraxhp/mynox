@@ -13,7 +13,7 @@ impl<D> Formater for D
 where 
     D: Display
 {
-    fn as_command(self) ->          String { format!("aaa:{}", self) }
+    fn as_command(self) ->          String { format!("aaa:<raw>{}</raw>", self) }
     fn as_tip(self) ->              String { format!("aab:{}", self) }
     fn as_tip_cotinuation(self) ->  String { format!("aac:{}", self) }
 }
